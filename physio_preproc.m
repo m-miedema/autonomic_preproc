@@ -65,7 +65,7 @@ overwrite = true;
 % NOTE: endpoints likely to be inaccurate, account for this as necessary
 pad_time = 8;
 
-i = 1;%5;
+i = 2;%5;
 
 % convenient designation of sessions and scans
 if i == 1
@@ -656,7 +656,7 @@ else
                 % check if found a peak or trough
                 max_i = round(s1_i + max_s_i);
                 r_val = rsp_filt(max_i);
-                if rsp_filt(max_i-1)-r_val > 0
+                if mean(diff(diff(rsp_filt(s1_i:s2_i)))) > 0
                     % found a trough
                     rsp_trs = [rsp_trs;rsp_filt(max_i)];
                     rsp_trs_t = [rsp_trs_t;time(max_i)];
