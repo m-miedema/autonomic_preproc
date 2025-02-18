@@ -51,7 +51,7 @@ bids_dir = "D:\BIDS_working_dir\bids_MGH_FINAL\";
 out_dir = "D:\estimation\physio_preproc\";
 
 % manually select the subject ID
-sub_num = "1485";
+sub_num = "0059";
 
 % define some MRI acquisition parameters
 TR = 1.03;
@@ -65,7 +65,7 @@ overwrite = true;
 % NOTE: endpoints likely to be inaccurate, account for this as necessary
 pad_time = 8;
 
-i = 5;%5;
+i = 1;%5;
 
 % convenient designation of sessions and scans
 if i == 1
@@ -496,13 +496,13 @@ else
         t3 = tiledlayout(3,1,'TileSpacing','compact');
         ax1 = nexttile;
         p1 = plot(time,ppg_raw);
-        ylabel('Raw PPG')
+        ylabel('Raw PPG (V)')
         ax2 = nexttile;
         p2 = plot(time,ppg_filt);
         hold on
         p3 = plot(ppg_pks_t,ppg_pks,'o');
         hold off
-        ylabel('Filtered PPG')
+        ylabel('Filtered PPG  (a.u.)')
         ax3 = nexttile;
         plot(HR_t,HR)
         title(sprintf('Heart rate (%d±%d bpm)',round(mean(HR)),round(std(HR))))
@@ -536,6 +536,11 @@ else
 
         %% correct peak/trough detection and detect bad data
 
+        % calculate the envelopes
+        respUpp = interp1([time(1),rsp_pks_t',time(end)],[rsp_pks(1),rsp_pks',rsp_pks(end)],time);
+        respLow = interp1([time(1),rsp_trs_t',time(end)],[rsp_trs(1),rsp_trs',rsp_trs(end)],time);
+        
+
         f5 = figure('Name','Ventilation: QC');
         t5 = tiledlayout(3,1,'TileSpacing','compact');
         ax1 = nexttile;
@@ -545,6 +550,7 @@ else
         r2 = plot(time,rsp_filt);
         ylabel('Ventilation (a.u.)')
         hold on
+        fill([time; flipud(time)], [respLow; flipud(respUpp)], 'b', EdgeColor='none',FaceAlpha='0.15');
         r3 = plot(rsp_pks_t,rsp_pks,'o');
         r4 = plot(rsp_trs_t,rsp_trs,'o');
         hold off
@@ -736,29 +742,31 @@ else
         RF = diff(rsp_s); RF=[0;RF(:)]; RF = RF.^2;
 
         % calculate RVT
-        respUpp = interp1([0,rsp_pks_t',time(end)],[rsp_pks(1),rsp_pks',rsp_pks(end)],time_10);
-        respLow = interp1([0,rsp_trs_t',time(end)],[rsp_trs(1),rsp_trs',rsp_trs(end)],time_10);
+        % first re-calculate upper and lower envelopes
+        respUpp = interp1([time(1),rsp_pks_t',time(end)],[rsp_pks(1),rsp_pks',rsp_pks(end)],time_10);
+        respLow = interp1([time(1),rsp_trs_t',time(end)],[rsp_trs(1),rsp_trs',rsp_trs(end)],time_10);
         RVT = ((respUpp-respLow).*BR)';
+
 
         % plot an overview
         figure('Name','Ventilation: overview')
         t7 = tiledlayout(4,1,'TileSpacing','compact');
         ax1 = nexttile;
         plot(time,rsp_filt)
-        ylabel('Filtered ventilation')
+        ylabel('Filtered ventilation (a.u.)')
         hold on
         plot(rsp_pks_t,rsp_pks,'o');
         plot(rsp_trs_t,rsp_trs,'o');
         hold off
         ax2 = nexttile;
         plot(time_10,RF)
-        ylabel('Respiratory flow')
+        ylabel('Respiratory flow (a.u.)')
         ax3 = nexttile;
         plot(time_10,BR)
-        ylabel('Breathing rate')
+        ylabel('Breathing rate (rpm)')
         ax4 = nexttile;
         plot(time_10,RVT)
-        ylabel('Respiration volume per time')
+        ylabel('Respiration volume per time (a.u.)')
         linkaxes([ax1 ax2 ax3 ax4],'x')
         xlim([time(1),time(end)])
         savefig(strcat(out_dir,bids_root,'_resp.fig'))
