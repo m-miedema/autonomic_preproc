@@ -755,6 +755,7 @@ else
         plot(time,rsp_filt)
         ylabel('Filtered ventilation (a.u.)')
         hold on
+        fill([time_10, fliplr(time_10)], [respLow, fliplr(respUpp)], 'b', EdgeColor='none',FaceAlpha='0.15');
         plot(rsp_pks_t,rsp_pks,'o');
         plot(rsp_trs_t,rsp_trs,'o');
         hold off
