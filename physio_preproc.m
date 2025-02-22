@@ -51,7 +51,7 @@ bids_dir = "D:\BIDS_working_dir\bids_MGH_FINAL\";
 out_dir = "D:\estimation\physio_preproc\";
 
 % manually select the subject ID
-sub_num = "0059";
+sub_num = "1693";
 
 % define some MRI acquisition parameters
 TR = 1.03;
@@ -59,13 +59,13 @@ n_slice = 60;
 accel_f = 4;
 
 % choose whether to overwrite previous QC outcomes for this subject
-overwrite = true;
+overwrite = false; 
 
 % choose padding before/after scans in s
 % NOTE: endpoints likely to be inaccurate, account for this as necessary
 pad_time = 8;
 
-i = 2;%5;
+i = 5;%5;
 
 % convenient designation of sessions and scans
 if i == 1
@@ -171,6 +171,8 @@ else
         
         time = time(time_start_i:time_end_i);
         trig = trig(time_start_i:time_end_i);
+        trig_i = round(trig_i-time_start_i+1); 
+        trig_ind = trig_ind(time_start_i:time_end_i);
         ppg_raw = zscore(ppg_raw(time_start_i:time_end_i));
         rsp_raw = zscore(rsp_raw(time_start_i:time_end_i));
         N = time_end_i-time_start_i+1;
@@ -206,6 +208,7 @@ else
         plot(time,ppg_filt)
         ylabel('Bandpass-filtered PPG')
         linkaxes([ax1 ax2],'x')
+        xlim([100 103])
 
         % check the data for presence of time-locked scanner artefact
         prompt = "Add a notch filter at the scan slice frequency? Y/N [Y]: ";
@@ -223,7 +226,7 @@ else
             PPG_filter{end+1} = [b_notch,a_notch]; 
 
             close(f2)
-            figure('Name','PPG: filtering')
+            f2 = figure('Name','PPG: filtering');
             t2 = tiledlayout(3,1,'TileSpacing','compact');
             ax1 = nexttile;
             plot(time,ppg_raw)
@@ -263,11 +266,22 @@ else
             ppg_filt = downsample(ppg_filt,n_resamp);
             rsp_filt = downsample(rsp_filt,n_resamp);
             fs = fs/n_resamp;
+            trig_ind = zeros(size(time));
+            for i = 1:size(trig_i,1)
+                [~,index] = min(abs(time - time_orig(trig_i(i))));
+                trig_ind(index) = 1;
+            end
             disp(strcat("Data was downsampled to ",num2str(fs)," Hz."))
             DS_fs = [1,fs*n_resamp,fs];
         end
 
         time_10 = time(1):0.1:time(end);
+        % find corresponding trigger indices
+        trig_ind_10 = zeros(size(time_10));
+        for i = 1:size(trig_i,1)
+            [~,index] = min(abs(time_10 - time_orig(trig_i(i))));
+            trig_ind_10(index) = 1;
+        end        
         rsp_10 = interp1(time,rsp_filt,time_10);
 
         %% perform first-pass peak detection for PPG
@@ -489,10 +503,11 @@ else
         % recalculate HR
         HR = 60./diff(ppg_pks_t);
         HR_t = (ppg_pks_t(2:end)-ppg_pks_t(1:end-1))/2+ppg_pks_t(1:end-1);
+        HR_10 = interp1(HR_t,HR,time_10);
 
         % generate & save interactive figure with final peaks
         close(f3)
-        figure('Name','PPG: overview')
+        fo = figure('Name','PPG: overview');
         t3 = tiledlayout(3,1,'TileSpacing','compact');
         ax1 = nexttile;
         p1 = plot(time,ppg_raw);
@@ -519,6 +534,9 @@ else
             "5 - Otherwise problematic, consider further \n" + ...
             "Assign a qualitative label to this PPG data: ";
         PPG_q_qual = input(qc_prompt,"s");
+
+        close(f2)
+        close(fo)
 
         %% perform first-pass peak detection for ventilation data
         % find peaks
@@ -594,7 +612,7 @@ else
 
         % correct the peak detection
         % extend plot for context (if possible)
-            context_pad = 1;
+            context_pad = 3;
 
             s1 = search_starts(s) - context_pad*fs;
             s2 = search_ends(s) + context_pad*fs;
@@ -683,6 +701,11 @@ else
         % create a histogram like the one that will be used for finding the
         % phase
         NB=500;
+
+        %rsp_f1 = 0.01; rsp_f2 = 0.5;
+        %[filt_b, filt_a] = butter(2,[rsp_f1,rsp_f2]/(fs/2));
+        %rsp_filt2 = filtfilt(filt_b,filt_a,rsp_filt);
+        %RSP_filter = {[rsp_f1, rsp_f2], [filt_b, filt_a]};
         rsp_hist = smooth(rsp_filt, 1*fs);
         figure('Name','Ventilation: phase QC')
         t6 = tiledlayout(3,1,'TileSpacing','compact');
@@ -793,7 +816,7 @@ else
         PPGlocs = ppg_pks_t;
         resp = rsp_filt;
         resp_10 = rsp_10;
-        save(out_physio,'trig','time','Fs','TR','PPGlocs','PPGderivlocs','HR','Fs_10','resp','resp_10','BR','RVT','RF','rsp_phase_interp')
+        save(out_physio,'trig_ind','trig_ind_10','time','time_10','Fs','TR','PPGlocs','PPGderivlocs','HR','HR_10','Fs_10','resp','resp_10','BR','RVT','RF','rsp_phase_interp')
 
         %% export QC physio object
         if exist('ppg_bad_data','var') == 1
