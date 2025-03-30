@@ -131,7 +131,7 @@ for sub_i = 1:length(subjects)
         %plotobjective(@shufcn,[ub; lb]);
 
         h_train = @(P) func_M4_PRF_sc(P,Ts_10,HR_10,RF,trig_ind_10,GS,1);
-        h_constraint = @bound_constraint;
+        h_constraint = @func_bound_constraint;
 
         % Uncomment the following line if you want to use  Genetic Algorithm
         % (GA). GA may yield better fit with the cost of longer computational time.
