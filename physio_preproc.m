@@ -51,7 +51,7 @@ bids_dir = "D:\BIDS_working_dir\bids_MGH_FINAL\";
 out_dir = "D:\estimation\physio_preproc\";
 
 % manually select the subject ID
-sub_num = "1693";
+sub_num = "0059";
 
 % define some MRI acquisition parameters
 TR = 1.03;
@@ -65,7 +65,7 @@ overwrite = false;
 % NOTE: endpoints likely to be inaccurate, account for this as necessary
 pad_time = 8;
 
-i = 5;%5;
+i = 2;%5;
 
 % convenient designation of sessions and scans
 if i == 1
@@ -136,6 +136,7 @@ else
 
         % find time, triggers, ppg, and respiration data
         k_trig = find(contains(cols,'UIM'));
+        %k_trig = find(contains(cols,'CBLCFMA')); (adjust if needed)
         k_ppg = find(contains(cols,'PPG'));
         k_rsp = find(contains(cols,'RSP'));
 
@@ -194,7 +195,7 @@ else
 
         %% do basic pre-processing on PPG data
         % bandpass filter
-        ppg_f1 = 0.3; ppg_f2 = 10;     
+        ppg_f1 = 0.3; ppg_f2 = 10;  
         [filt_b, filt_a] = butter(2,[ppg_f1,ppg_f2]/(fs/2));
         ppg_filt = filtfilt(filt_b,filt_a,ppg_raw);
         PPG_filter = {[ppg_f1, ppg_f2], [filt_b, filt_a]};
@@ -221,6 +222,7 @@ else
             % notch filter the data
             notch_freq = n_slice/accel_f/TR; % scanner artefact frequency
             [b_notch, a_notch] = butter(2, [notch_freq-0.25 notch_freq+0.25]./(fs/2), 'stop');
+            %[b_notch, a_notch] = butter(6, [notch_freq-0.15 notch_freq+0.15]./(fs/2), 'stop');
             ppg_bandpass = ppg_filt;
             ppg_filt = filtfilt(b_notch,a_notch,ppg_bandpass);
             PPG_filter{end+1} = [b_notch,a_notch]; 
@@ -287,8 +289,8 @@ else
         %% perform first-pass peak detection for PPG
 
         % find peaks
-        min_peak_p = 0.009; % set manually as necessary
-        min_peak_time = 0.6;%75;%0.55; % set a minimum distance between peaks in s
+        min_peak_p = 0.008;% set manually as necessary, suggested 0.007-0.01
+        min_peak_time = 0.65; % set a minimum distance between peaks in s, suggested 0.55-0.9
         min_peak_dist = fs*min_peak_time;
         
 
@@ -309,6 +311,10 @@ else
             ppg_pks = [ppg_pks,ppg_filt(zer_pk)];
         end
         PPG_auto_peak_params = {min_peak_p,min_peak_dist,tol_0};
+
+        % EXCEPTIONAL: can use derivative peaks if HR otherwise unstable
+        %ppg_pks = ppg_filt(ppg_d_i);
+        %ppg_pks_t = ppg_d_pks_t;
 
         % calculate the HR
         HR = 60./diff(ppg_pks_t);
@@ -374,8 +380,6 @@ else
             % extend plot for context (if possible)
             context_pad = 1;
 
-            % s1 = ppg_search_ind(search_break(s)) - context_pad*fs;
-            % s2 = ppg_search_ind(search_break(s+1)) + context_pad*fs;
             s1 = search_starts(s) - context_pad*fs;
             s2 = search_ends(s) + context_pad*fs;
             if s1 < 1
@@ -385,7 +389,6 @@ else
                 s2 = N-1;
             end
             % if brush selected several small regions, join them
-            % s_cont = search_starts(s);
             if s < size(search_starts,2)
                 if s2 > search_starts(s+1)
                     n_stitch = n_stitch + 1;
@@ -393,8 +396,6 @@ else
                 else
                     n_stitch = 0;
                     
-                % elseif s1 < search_ends(s-1)
-                %     s_cont = search_starts(s-1);
                 end
             end
 
@@ -702,10 +703,6 @@ else
         % phase
         NB=500;
 
-        %rsp_f1 = 0.01; rsp_f2 = 0.5;
-        %[filt_b, filt_a] = butter(2,[rsp_f1,rsp_f2]/(fs/2));
-        %rsp_filt2 = filtfilt(filt_b,filt_a,rsp_filt);
-        %RSP_filter = {[rsp_f1, rsp_f2], [filt_b, filt_a]};
         rsp_hist = smooth(rsp_filt, 1*fs);
         figure('Name','Ventilation: phase QC')
         t6 = tiledlayout(3,1,'TileSpacing','compact');
@@ -795,7 +792,7 @@ else
         xlim([time(1),time(end)])
         savefig(strcat(out_dir,bids_root,'_resp.fig'))
 
-        % TO DO: more advanced correction techniques e.g.
+        % TO DO: could add more advanced correction techniques e.g.
         % search for/highlight over regions of clipping and interpolate
         % search for belt slippage
 
