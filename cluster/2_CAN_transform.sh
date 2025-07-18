@@ -1,11 +1,10 @@
 #!/bin/bash
 
 #SBATCH --array=1-22
-#SBATCH --time=0:58:00   # walltime 
+#SBATCH --time=1:18:00   # walltime 
 #SBATCH --ntasks=1   # number of processor cores (i.e. tasks) 
 #SBATCH --nodes=1   # number of nodes 
 #SBATCH --mem-per-cpu=16G  # memory per CPU core 
-#SBATCH --account=def-gmitsis  
 #SBATCH --job-name=CAN_mask_transform
 #SBATCH --mail-type=ALL
 #SBATCH --output=out_CAN_mask_%j.txt
@@ -27,8 +26,7 @@ CAN_MNI1mm=/home/miedemam/scratch/MGH_derivatives/CAN_mask/CAN_masks.nii.gz
 transform_root=/home/miedemam/scratch/MGH_derivatives/feat/sub-${sub_num}/ses-02/rest.feat/
 
 # calculate an inverted transformation from MNI152 to session 2 structural
-#invwarp -w ${transform_root}reg/highres2standard_warp -o ${transform_root}reg/standard2highres_warp -r ${transform_root}reg/highres
-
+invwarp -w ${transform_root}reg/highres2standard_warp -o ${transform_root}reg/standard2highres_warp -r ${transform_root}reg/highres
 
 declare -a ses=("02" "03") 
 declare -a tasks=("rest" "breathing" "coldpressor")
